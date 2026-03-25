@@ -1,14 +1,18 @@
 import json
 import pandas as pd
 import datetime
+import os
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from db import init_db, get_conn
 
 # ====== 設定 ======
 SPREADSHEET_ID = "1aoR16J8yGx1wkgK0DYHd51UcarYv8yOXmtFuThvdnu4"
-SHEET_NAME = "scoring_sheet"  
+SHEET_NAME = "scoring_sheet"
+
+# Renderでもローカルでも対応
 SERVICE_ACCOUNT_FILE = "service_account.json"
+
 
 # ====== 設定ファイル ======
 with open("config.json", "r", encoding="utf-8") as f:
@@ -19,53 +23,56 @@ FACTORS = config["factors"]
 
 # ====== Google Sheets 読み込み ======
 def load_sheet():
-    credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE,
-        scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
-    )
+    try:
+        credentials = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE,
+            scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
+        )
 
-    service = build("sheets", "v4", credentials=credentials)
-    sheet = service.spreadsheets()
+        service = build("sheets", "v4", credentials=credentials)
+        sheet = service.spreadsheets()
 
-    result = sheet.values().get(
-        spreadsheetId=SPREADSHEET_ID,
-        range=f"{SHEET_NAME}!A:AH"
-    ).execute()
+        result = sheet.values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range=f"{SHEET_NAME}!A:AH"
+        ).execute()
 
-    values = result.get("values", [])
+        values = result.get("values", [])
 
-    if not values:
-        print("❌ シートにデータがありません")
+        if not values:
+            print("❌ シートにデータなし")
+            return pd.DataFrame()
+
+        header = values[0]
+        rows = values[1:]
+
+        df = pd.DataFrame(rows, columns=header)
+
+        # 列名整理
+        df.columns = [str(c).strip() for c in df.columns]
+
+        print("DEBUG columns:", df.columns)
+
+        # 自動リネーム
+        rename_map = {}
+        for col in df.columns:
+            if "メール" in col:
+                rename_map[col] = "email"
+            elif "名前" in col:
+                rename_map[col] = "name"
+            elif "タイムスタンプ" in col:
+                rename_map[col] = "response_id"
+
+        df.rename(columns=rename_map, inplace=True)
+
+        print("DEBUG renamed:", df.columns)
+        print("DEBUG sample:\n", df.head())
+
+        return df
+
+    except Exception as e:
+        print("❌ load_sheet error:", e)
         return pd.DataFrame()
-
-    header = values[0]
-    rows = values[1:]
-
-    df = pd.DataFrame(rows, columns=header)
-
-    # 列名整形
-    df.columns = [str(c).strip() for c in df.columns]
-
-    print("DEBUG columns:", df.columns)
-
-    # ===== 列名自動変換 =====
-    rename_map = {}
-
-    for col in df.columns:
-        if "メール" in col:
-            rename_map[col] = "email"
-        elif "名前" in col:
-            rename_map[col] = "name"
-        elif "タイムスタンプ" in col:
-            rename_map[col] = "response_id"
-
-    df.rename(columns=rename_map, inplace=True)
-
-    print("DEBUG renamed columns:", df.columns)
-    print("DEBUG sample:")
-    print(df.head())
-
-    return df
 
 
 # ====== スコア計算 ======
@@ -94,7 +101,6 @@ def compute_scores(row):
 def generate_feedback(row):
     fb = pd.read_csv("feedback_master.csv", sep=None, engine="python")
     fb.columns = [str(c).strip().lstrip("\ufeff") for c in fb.columns]
-
     fb["serial"] = pd.to_numeric(fb["serial"], errors="coerce")
 
     improve, strength = [], []
@@ -125,73 +131,84 @@ def generate_feedback(row):
     return "\n".join(improve), "\n".join(strength)
 
 
-# ====== メイン処理 ======
+# ====== メイン ======
 def run():
-    init_db()
-    df = load_sheet()
+    try:
+        print("🔥 batch start")
 
-    if df.empty:
-        return
+        # DB作成（これ超重要）
+        init_db()
+        print("✅ DB initialized")
 
-    conn = get_conn()
-    cur = conn.cursor()
+        df = load_sheet()
 
-    for _, row in df.iterrows():
-        email = str(row.get("email", "")).strip()
+        if df.empty:
+            print("⚠️ データなし")
+            return
 
-        if not email:
-            continue
+        conn = get_conn()
+        cur = conn.cursor()
 
-        response_id = str(row.get("response_id", "")).strip()
-        name = str(row.get("name", "")).strip()
+        for _, row in df.iterrows():
+            email = str(row.get("email", "")).strip()
 
-        # 重複チェック
-        cur.execute(
-            "SELECT id FROM respondents WHERE response_id=?",
-            (response_id,)
-        )
-        if cur.fetchone():
-            continue
+            if not email:
+                continue
 
-        scores, overall = compute_scores(row)
-        improve, strength = generate_feedback(row)
+            response_id = str(row.get("response_id", "")).strip()
+            name = str(row.get("name", "")).strip()
 
-        # respondents
-        cur.execute("""
-        INSERT INTO respondents (response_id, email, name, processed_at, status)
-        VALUES (?, ?, ?, ?, ?)
-        """, (
-            response_id,
-            email,
-            name,
-            datetime.datetime.now().isoformat(),
-            "done"
-        ))
+            # 重複チェック
+            cur.execute(
+                "SELECT id FROM respondents WHERE response_id=?",
+                (response_id,)
+            )
+            if cur.fetchone():
+                continue
 
-        rid = cur.lastrowid
+            scores, overall = compute_scores(row)
+            improve, strength = generate_feedback(row)
 
-        # scores
-        cur.execute("""
-        INSERT INTO scores (respondent_id, overall, f1, f2, f3, f4, f5)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            rid,
-            overall,
-            scores["F1"], scores["F2"],
-            scores["F3"], scores["F4"], scores["F5"]
-        ))
+            # respondents
+            cur.execute("""
+            INSERT INTO respondents (response_id, email, name, processed_at, status)
+            VALUES (?, ?, ?, ?, ?)
+            """, (
+                response_id,
+                email,
+                name,
+                datetime.datetime.now().isoformat(),
+                "done"
+            ))
 
-        # feedback
-        cur.execute("""
-        INSERT INTO feedback (respondent_id, improve_text, strength_text)
-        VALUES (?, ?, ?)
-        """, (rid, improve, strength))
+            rid = cur.lastrowid
 
-    conn.commit()
-    conn.close()
+            # scores
+            cur.execute("""
+            INSERT INTO scores (respondent_id, overall, f1, f2, f3, f4, f5)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                rid,
+                overall,
+                scores.get("F1"), scores.get("F2"),
+                scores.get("F3"), scores.get("F4"), scores.get("F5")
+            ))
 
-    print("✅ Batch completed successfully")
+            # feedback
+            cur.execute("""
+            INSERT INTO feedback (respondent_id, improve_text, strength_text)
+            VALUES (?, ?, ?)
+            """, (rid, improve, strength))
+
+        conn.commit()
+        conn.close()
+
+        print("✅ Batch completed")
+
+    except Exception as e:
+        print("❌ batch error:", e)
 
 
+# ====== 実行 ======
 if __name__ == "__main__":
     run()
