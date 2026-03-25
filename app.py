@@ -10,6 +10,7 @@ templates = Jinja2Templates(directory="templates")
 DB_PATH = "ims.sqlite3"
 
 
+# ===== DB取得 =====
 def get_result_by_email(email: str):
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -33,6 +34,7 @@ def get_result_by_email(email: str):
     return row
 
 
+# ===== 因子別フィードバック =====
 def generate_factor_feedback_from_csv(data):
     fb = pd.read_csv("feedback_master.csv", sep=None, engine="python")
     fb.columns = [str(c).strip().lstrip("\ufeff") for c in fb.columns]
@@ -46,32 +48,45 @@ def generate_factor_feedback_from_csv(data):
         "F5": {"strengths": [], "improves": []},
     }
 
+    # 🔥 None対策
     score_map = {
-        1: data["f1"],
-        2: data["f2"],
-        3: data["f3"],
-        4: data["f4"],
-        5: data["f5"],
+        1: float(data["f1"]) if data["f1"] is not None else None,
+        2: float(data["f2"]) if data["f2"] is not None else None,
+        3: float(data["f3"]) if data["f3"] is not None else None,
+        4: float(data["f4"]) if data["f4"] is not None else None,
+        5: float(data["f5"]) if data["f5"] is not None else None,
     }
 
     for _, row in fb.iterrows():
         f = row["factor"]
+
         if pd.isna(f):
             continue
 
         f = int(f)
         fid = f"F{f}"
-        score = score_map[f]
+        score = score_map.get(f)
 
+        # 🔥 Noneならスキップ
+        if score is None:
+            continue
+
+        # 強み
         if score >= 3 and len(result[fid]["strengths"]) < 2:
-            result[fid]["strengths"].append("・" + str(row["feedback_strength"]))
+            txt = str(row["feedback_strength"]).strip()
+            if txt and txt.lower() != "nan":
+                result[fid]["strengths"].append("・" + txt)
 
+        # 工夫
         elif score < 3 and len(result[fid]["improves"]) < 2:
-            result[fid]["improves"].append("・" + str(row["feedback_improve"]))
+            txt = str(row["feedback_improve"]).strip()
+            if txt and txt.lower() != "nan":
+                result[fid]["improves"].append("・" + txt)
 
     return result
 
 
+# ===== API =====
 @app.get("/result", response_class=HTMLResponse)
 def result(request: Request, email: str):
     data = get_result_by_email(email)
@@ -89,3 +104,12 @@ def result(request: Request, email: str):
             "factor_items": factor_items
         }
     )
+
+
+# ===== 🔥 これが超重要（Render対策） =====
+try:
+    from batch import run
+    run()
+    print("✅ Batch executed on startup")
+except Exception as e:
+    print("⚠️ Batch failed:", e)
