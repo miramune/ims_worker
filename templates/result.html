@@ -10,7 +10,6 @@ body {
   margin: 30px;
 }
 
-/* レイアウト */
 .result-container {
   display: grid;
   grid-template-columns: 1fr 650px 1fr;
@@ -21,21 +20,18 @@ body {
   margin-top: 40px;
 }
 
-/* レーダー */
 .chart-area {
   grid-column: 2;
   grid-row: 2;
   width: 620px;
 }
 
-/* 吹き出し配置 */
 .bubble-f1 { grid-column: 2; grid-row: 1; }
 .bubble-f5 { grid-column: 1; grid-row: 2; justify-self: end; }
 .bubble-f2 { grid-column: 3; grid-row: 2; justify-self: start; }
 .bubble-f4 { grid-column: 1; grid-row: 3; justify-self: end; }
 .bubble-f3 { grid-column: 3; grid-row: 3; justify-self: start; }
 
-/* 吹き出し */
 .bubble {
   background: #f5f7ff;
   padding: 20px;
@@ -56,11 +52,8 @@ body {
   border-color: transparent #f5f7ff transparent transparent;
 }
 
-h4 {
-  margin-bottom: 5px;
-}
+h4 { margin-bottom: 5px; }
 
-/* ←追加：説明文 */
 .desc {
   font-size: 13px;
   color: #666;
@@ -68,15 +61,8 @@ h4 {
   line-height: 1.4;
 }
 
-.strength {
-  color: #2e7d32;
-  margin-top: 10px;
-}
-
-.improve {
-  color: #ef6c00;
-  margin-top: 10px;
-}
+.strength { color: #2e7d32; margin-top: 10px; }
+.improve { color: #ef6c00; margin-top: 10px; }
 </style>
 </head>
 
@@ -89,10 +75,9 @@ h4 {
 
 <div class="result-container">
 
-  <!-- F1 -->
   <div class="bubble bubble-f1">
-    <h4>柔軟な問題解決（{{ data["f1"]|round(1) }}）</h4>
-    <p class="desc">困難な状況でも視点を切り替え、さまざまな解決策を考えながら前向きに行動できる力。</p>
+    <h4>柔軟な問題解決（{{ (data["f1"] or 0)|round(1) }}）</h4>
+    <p class="desc">困難な状況でも視点を切り替え、解決策を考えながら行動できる力。</p>
     <div class="strength"><strong>強み</strong></div>
     {% for s in factor_items["F1"]["strengths"] %}
       <div>{{ s }}</div>
@@ -103,10 +88,9 @@ h4 {
     {% endfor %}
   </div>
 
-  <!-- F5 -->
   <div class="bubble bubble-f5">
-    <h4>挑戦のための心理的安全性（{{ data["f5"]|round(1) }}）</h4>
-    <p class="desc">安心して意見を表現し、周囲と支え合いながら新しい挑戦に取り組める力。</p>
+    <h4>心理的安全性（{{ (data["f5"] or 0)|round(1) }}）</h4>
+    <p class="desc">安心して意見を言い、挑戦できる力。</p>
     <div class="strength"><strong>強み</strong></div>
     {% for s in factor_items["F5"]["strengths"] %}
       <div>{{ s }}</div>
@@ -117,10 +101,9 @@ h4 {
     {% endfor %}
   </div>
 
-  <!-- F2 -->
   <div class="bubble bubble-f2">
-    <h4>価値に基づく行動（{{ data["f2"]|round(1) }}）</h4>
-    <p class="desc">自分が大切にしたい価値を軸に、日常生活の中で一貫して行動できる力。</p>
+    <h4>価値に基づく行動（{{ (data["f2"] or 0)|round(1) }}）</h4>
+    <p class="desc">自分の価値に沿って行動する力。</p>
     <div class="strength"><strong>強み</strong></div>
     {% for s in factor_items["F2"]["strengths"] %}
       <div>{{ s }}</div>
@@ -131,10 +114,9 @@ h4 {
     {% endfor %}
   </div>
 
-  <!-- F4 -->
   <div class="bubble bubble-f4">
-    <h4>インスピレーション（{{ data["f4"]|round(1) }}）</h4>
-    <p class="desc">新しい経験やアイデアに触れたときのワクワクや前向きな感情を感じ取る力。</p>
+    <h4>インスピレーション（{{ (data["f4"] or 0)|round(1) }}）</h4>
+    <p class="desc">新しいことにワクワクする力。</p>
     <div class="strength"><strong>強み</strong></div>
     {% for s in factor_items["F4"]["strengths"] %}
       <div>{{ s }}</div>
@@ -145,10 +127,9 @@ h4 {
     {% endfor %}
   </div>
 
-  <!-- F3 -->
   <div class="bubble bubble-f3">
-    <h4>他者への尊重（{{ data["f3"]|round(1) }}）</h4>
-    <p class="desc">相手の立場や気持ちを理解し、思いやりをもって関わることができる力。</p>
+    <h4>他者への尊重（{{ (data["f3"] or 0)|round(1) }}）</h4>
+    <p class="desc">相手を理解し思いやる力。</p>
     <div class="strength"><strong>強み</strong></div>
     {% for s in factor_items["F3"]["strengths"] %}
       <div>{{ s }}</div>
@@ -159,7 +140,6 @@ h4 {
     {% endfor %}
   </div>
 
-  <!-- レーダー -->
   <div class="chart-area">
     <canvas id="radarChart"></canvas>
   </div>
@@ -172,21 +152,15 @@ h4 {
 new Chart(document.getElementById('radarChart'), {
   type: 'radar',
   data: {
-    labels: [
-      "柔軟な問題解決",
-      "価値に基づく行動",
-      "他者への尊重",
-      "インスピレーション",
-      "心理的安全性"
-    ],
+    labels: ["F1","F2","F3","F4","F5"],
     datasets: [{
       label: "スコア",
       data: [
-        {{ data["f1"] }},
-        {{ data["f2"] }},
-        {{ data["f3"] }},
-        {{ data["f4"] }},
-        {{ data["f5"] }}
+        {{ data["f1"] or 0 }},
+        {{ data["f2"] or 0 }},
+        {{ data["f3"] or 0 }},
+        {{ data["f4"] or 0 }},
+        {{ data["f5"] or 0 }}
       ]
     }]
   },
