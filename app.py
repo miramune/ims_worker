@@ -3,11 +3,15 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 import sqlite3
 import pandas as pd
+import os
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
 
-DB_PATH = "ims.sqlite3"
+# 🔥 ここが超重要（Render対応）
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
+DB_PATH = os.path.join(BASE_DIR, "ims.sqlite3")
 
 
 # ===== DB取得 =====
@@ -32,7 +36,6 @@ def get_result_by_email(email: str):
     row = cur.fetchone()
     conn.close()
 
-    # 🔥 ここが最重要
     if row:
         return dict(row)
 
@@ -41,7 +44,7 @@ def get_result_by_email(email: str):
 
 # ===== 因子別フィードバック =====
 def generate_factor_feedback_from_csv(data):
-    fb = pd.read_csv("feedback_master.csv", sep=None, engine="python")
+    fb = pd.read_csv(os.path.join(BASE_DIR, "feedback_master.csv"), sep=None, engine="python")
     fb.columns = [str(c).strip().lstrip("\ufeff") for c in fb.columns]
     fb["factor"] = pd.to_numeric(fb["factor"], errors="coerce")
 
