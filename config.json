@@ -1,0 +1,57 @@
+{
+  "scale_name": "Innovation Mind Scale",
+  "version": "JP-30items-v1",
+  "item_ids": [
+    "IM01","IM02","IM03","IM04","IM05","IM06","IM07","IM08","IM09","IM10",
+    "IM11","IM12","IM13","IM14","IM15","IM16","IM17","IM18","IM19","IM20",
+    "IM21","IM22","IM23","IM24","IM25","IM26","IM27","IM28","IM29","IM30"
+  ],
+  "reverse_items": [],
+  "factors": [
+    {
+      "id": "F1",
+      "name": "柔軟な問題解決",
+      "items": ["IM01","IM05","IM08","IM12","IM14","IM18","IM21","IM24","IM27"]
+    },
+    {
+      "id": "F2",
+      "name": "セルフコンパッション",
+      "items": ["IM02","IM06","IM09","IM13","IM15","IM19","IM22","IM25","IM28"]
+    },
+    {
+      "id": "F3",
+      "name": "他者への尊重",
+      "items": ["IM03","IM10","IM16","IM23","IM29"]
+    },
+    {
+      "id": "F4",
+      "name": "インスピレーション",
+      "items": ["IM07","IM20","IM30"]
+    },
+    {
+      "id": "F5",
+      "name": "挑戦のための心理的安全性",
+      "items": ["IM04","IM11","IM17","IM26"]
+    }
+  ],
+  "scoring": {
+    "item_min": 0,
+    "item_max": 4,
+    "factor_score_method": "mean",
+    "overall_score_method": "mean_of_all_items",
+    "round_display_decimals": 1
+  },
+  "feedback_rules": {
+    "improve_item_scores": [0, 1],
+    "strength_item_scores": [3, 4],
+    "neutral_item_scores": [2],
+    "neutral_policy": "omit"
+  },
+  "validation": {
+    "require_all_items_present": true,
+    "require_non_empty": true,
+    "require_integer": true,
+    "allowed_values": [0, 1, 2, 3, 4],
+    "on_validation_error": "stop_send_and_log"
+  }
+}
