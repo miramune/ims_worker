@@ -69,73 +69,73 @@ h4 { margin-bottom: 5px; }
 <body>
 
 <h2>診断結果</h2>
-<p>氏名: {{ data["name"] }}</p>
+<p>氏名: {{ data.name }}</p>
 
 <hr>
 
 <div class="result-container">
 
   <div class="bubble bubble-f1">
-    <h4>柔軟な問題解決（{{ (data["f1"] or 0)|round(1) }}）</h4>
+    <h4>柔軟な問題解決（{{ (data.f1 or 0)|round(1) }}）</h4>
     <p class="desc">困難な状況でも視点を切り替え、解決策を考えながら行動できる力。</p>
     <div class="strength"><strong>強み</strong></div>
-    {% for s in factor_items["F1"]["strengths"] %}
+    {% for s in factor_items.F1.strengths %}
       <div>{{ s }}</div>
     {% endfor %}
     <div class="improve"><strong>工夫</strong></div>
-    {% for i in factor_items["F1"]["improves"] %}
+    {% for i in factor_items.F1.improves %}
       <div>{{ i }}</div>
     {% endfor %}
   </div>
 
   <div class="bubble bubble-f5">
-    <h4>心理的安全性（{{ (data["f5"] or 0)|round(1) }}）</h4>
+    <h4>心理的安全性（{{ (data.f5 or 0)|round(1) }}）</h4>
     <p class="desc">安心して意見を言い、挑戦できる力。</p>
     <div class="strength"><strong>強み</strong></div>
-    {% for s in factor_items["F5"]["strengths"] %}
+    {% for s in factor_items.F5.strengths %}
       <div>{{ s }}</div>
     {% endfor %}
     <div class="improve"><strong>工夫</strong></div>
-    {% for i in factor_items["F5"]["improves"] %}
+    {% for i in factor_items.F5.improves %}
       <div>{{ i }}</div>
     {% endfor %}
   </div>
 
   <div class="bubble bubble-f2">
-    <h4>価値に基づく行動（{{ (data["f2"] or 0)|round(1) }}）</h4>
+    <h4>価値に基づく行動（{{ (data.f2 or 0)|round(1) }}）</h4>
     <p class="desc">自分の価値に沿って行動する力。</p>
     <div class="strength"><strong>強み</strong></div>
-    {% for s in factor_items["F2"]["strengths"] %}
+    {% for s in factor_items.F2.strengths %}
       <div>{{ s }}</div>
     {% endfor %}
     <div class="improve"><strong>工夫</strong></div>
-    {% for i in factor_items["F2"]["improves"] %}
+    {% for i in factor_items.F2.improves %}
       <div>{{ i }}</div>
     {% endfor %}
   </div>
 
   <div class="bubble bubble-f4">
-    <h4>インスピレーション（{{ (data["f4"] or 0)|round(1) }}）</h4>
+    <h4>インスピレーション（{{ (data.f4 or 0)|round(1) }}）</h4>
     <p class="desc">新しいことにワクワクする力。</p>
     <div class="strength"><strong>強み</strong></div>
-    {% for s in factor_items["F4"]["strengths"] %}
+    {% for s in factor_items.F4.strengths %}
       <div>{{ s }}</div>
     {% endfor %}
     <div class="improve"><strong>工夫</strong></div>
-    {% for i in factor_items["F4"]["improves"] %}
+    {% for i in factor_items.F4.improves %}
       <div>{{ i }}</div>
     {% endfor %}
   </div>
 
   <div class="bubble bubble-f3">
-    <h4>他者への尊重（{{ (data["f3"] or 0)|round(1) }}）</h4>
+    <h4>他者への尊重（{{ (data.f3 or 0)|round(1) }}）</h4>
     <p class="desc">相手を理解し思いやる力。</p>
     <div class="strength"><strong>強み</strong></div>
-    {% for s in factor_items["F3"]["strengths"] %}
+    {% for s in factor_items.F3.strengths %}
       <div>{{ s }}</div>
     {% endfor %}
     <div class="improve"><strong>工夫</strong></div>
-    {% for i in factor_items["F3"]["improves"] %}
+    {% for i in factor_items.F3.improves %}
       <div>{{ i }}</div>
     {% endfor %}
   </div>
@@ -156,11 +156,11 @@ new Chart(document.getElementById('radarChart'), {
     datasets: [{
       label: "スコア",
       data: [
-        {{ data["f1"] or 0 }},
-        {{ data["f2"] or 0 }},
-        {{ data["f3"] or 0 }},
-        {{ data["f4"] or 0 }},
-        {{ data["f5"] or 0 }}
+        {{ data.f1 or 0 }},
+        {{ data.f2 or 0 }},
+        {{ data.f3 or 0 }},
+        {{ data.f4 or 0 }},
+        {{ data.f5 or 0 }}
       ]
     }]
   },
