@@ -31,7 +31,12 @@ def get_result_by_email(email: str):
 
     row = cur.fetchone()
     conn.close()
-    return row
+
+    # 🔥 ここが最重要
+    if row:
+        return dict(row)
+
+    return None
 
 
 # ===== 因子別フィードバック =====
@@ -48,7 +53,6 @@ def generate_factor_feedback_from_csv(data):
         "F5": {"strengths": [], "improves": []},
     }
 
-    # 🔥 None対策
     score_map = {
         1: float(data["f1"]) if data["f1"] is not None else None,
         2: float(data["f2"]) if data["f2"] is not None else None,
@@ -67,17 +71,14 @@ def generate_factor_feedback_from_csv(data):
         fid = f"F{f}"
         score = score_map.get(f)
 
-        # 🔥 Noneならスキップ
         if score is None:
             continue
 
-        # 強み
         if score >= 3 and len(result[fid]["strengths"]) < 2:
             txt = str(row["feedback_strength"]).strip()
             if txt and txt.lower() != "nan":
                 result[fid]["strengths"].append("・" + txt)
 
-        # 工夫
         elif score < 3 and len(result[fid]["improves"]) < 2:
             txt = str(row["feedback_improve"]).strip()
             if txt and txt.lower() != "nan":
@@ -106,7 +107,7 @@ def result(request: Request, email: str):
     )
 
 
-# ===== 🔥 これが超重要（Render対策） =====
+# ===== 起動時バッチ =====
 try:
     from batch import run
     run()
