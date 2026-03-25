@@ -10,10 +10,6 @@ from db import init_db, get_conn
 SPREADSHEET_ID = "1aoR16J8yGx1wkgK0DYHd51UcarYv8yOXmtFuThvdnu4"
 SHEET_NAME = "scoring_sheet"
 
-# Renderでもローカルでも対応
-SERVICE_ACCOUNT_FILE = "service_account.json"
-
-
 # ====== 設定ファイル ======
 with open("config.json", "r", encoding="utf-8") as f:
     config = json.load(f)
@@ -21,13 +17,29 @@ with open("config.json", "r", encoding="utf-8") as f:
 FACTORS = config["factors"]
 
 
+# ====== 認証（🔥ここが重要） ======
+def load_credentials():
+    # Render環境（環境変数）
+    if "SERVICE_ACCOUNT_JSON" in os.environ:
+        print("🔥 using ENV service account")
+        info = json.loads(os.environ["SERVICE_ACCOUNT_JSON"])
+        return service_account.Credentials.from_service_account_info(
+            info,
+            scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
+        )
+    else:
+        # ローカル
+        print("🔥 using local json file")
+        return service_account.Credentials.from_service_account_file(
+            "service_account.json",
+            scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
+        )
+
+
 # ====== Google Sheets 読み込み ======
 def load_sheet():
     try:
-        credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE,
-            scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
-        )
+        credentials = load_credentials()
 
         service = build("sheets", "v4", credentials=credentials)
         sheet = service.spreadsheets()
@@ -48,7 +60,7 @@ def load_sheet():
 
         df = pd.DataFrame(rows, columns=header)
 
-        # 列名整理
+        # 列名整形
         df.columns = [str(c).strip() for c in df.columns]
 
         print("DEBUG columns:", df.columns)
@@ -89,10 +101,10 @@ def compute_scores(row):
             if v != "":
                 vals.append(float(v))
 
-        factor_scores[fid] = sum(vals)/len(vals) if vals else None
+        factor_scores[fid] = sum(vals) / len(vals) if vals else None
 
     valid = [v for v in factor_scores.values() if v is not None]
-    overall = sum(valid)/len(valid) if valid else None
+    overall = sum(valid) / len(valid) if valid else None
 
     return factor_scores, overall
 
@@ -136,7 +148,7 @@ def run():
     try:
         print("🔥 batch start")
 
-        # DB作成（これ超重要）
+        # DB初期化（超重要）
         init_db()
         print("✅ DB initialized")
 
